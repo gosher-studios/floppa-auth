@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+	</head>
+	<body>
+		<h1>you will be boiled part 2</h1>
+		register:
+		<form method="post" action="http://127.0.0.1:8080/register">
+			<label for="username">username:</label>
+			<input
+				type="text"
+				name="username"
+				required
+				maxlength="32"
+				pattern="[a-zA-Z0-9_]+"
+			/><br />
+			<label for="password">password:</label>
+			<input
+				type="password"
+				name="password"
+				required
+				maxlength="72"
+			/><br />
+			<input type="submit" value="Register" />
+		</form>
+		login:
+		<form method="post" action="http://127.0.0.1:8080/login">
+			<label for="username">username:</label>
+			<input
+				type="text"
+				name="username"
+				required
+				maxlength="32"
+				pattern="[a-zA-Z0-9_]+"
+			/><br />
+			<label for="password">password:</label>
+			<input
+				type="password"
+				name="password"
+				required
+				maxlength="72"
+			/><br />
+			<input type="submit" value="Log in" />
+		</form>
+		<form method="post" action="http://127.0.0.1:8080/logout">
+			<input type="submit" value="Log out" />
+		</form>
+		<script>
+			history.replaceState(null, document.title, "/");
+		</script>
+	</body>
+</html>

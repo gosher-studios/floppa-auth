@@ -14,3 +14,5 @@ bonsaidb = {git = "https://github.com/khonsulabs/bonsaidb", features = ["local"]
 bonsaidb-core = {git = "https://github.com/khonsulabs/bonsaidb", features = ["uuid"]}
 bonsaidb-local = {git = "https://github.com/khonsulabs/bonsaidb"}
 bcrypt = "0.14.0"
+
+
