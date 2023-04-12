@@ -1,10 +1,11 @@
 mod state;
 
-use tide::{Request, Response, StatusCode};
+use tide::{Request, Response, Redirect, Body};
 use tide::security::CorsMiddleware;
 use tide::http::headers::HeaderValue;
 use tide::http::Cookie;
 use uuid::Uuid;
+use askama::Template;
 use serde::Deserialize;
 use state::{State, User};
 
@@ -21,26 +22,88 @@ async fn main() -> Result {
   tide::log::start();
   let mut app = tide::with_state(State::load()?);
   app.with(CorsMiddleware::new().allow_methods("GET, POST".parse::<HeaderValue>()?));
-  app.at("/register").post(new);
-  app.at("/login").post(login);
-  app.at("/logout").post(logout);
+  app.at("/").get(home);
+  app.at("/register").get(reg);
+  app.at("/login").get(log);
+  app.at("/static").serve_dir("static")?;
+  app.at("/auth/register").post(register);
+  app.at("/auth/login").post(login);
+  app.at("/auth/logout").post(logout);
   app.listen("127.0.0.1:8080").await?;
   Ok(())
 }
 
-async fn new(mut req: Request<State>) -> tide::Result {
+#[derive(Template)]
+#[template(path = "home.html")]
+struct Home {
+  username: String,
+  num_users: usize,
+}
+
+async fn home(req: Request<State>) -> tide::Result {
+  let state = req.state().lock();
+  // let username = match req
+  //   .cookie("session")
+  //   .map(|c| state.sessions.get(&Uuid::parse_str(c.value()).unwrap()))
+  //   .flatten()
+  // {
+  //   Some(s) => s.clone(),
+  //   None => "no exist".to_string(),
+  // };
+  let username = "username".to_string();
+  let mut body = Body::from_string(
+    Home {
+      username,
+      num_users: state.users.len(),
+    }
+    .render()?,
+  );
+  body.set_mime(Home::MIME_TYPE);
+  Ok(body.into())
+}
+
+#[derive(Template)]
+#[template(path = "register.html")]
+struct Register;
+
+async fn reg(_: Request<State>) -> tide::Result {
+  let mut body = Body::from_string(Register.render()?);
+  body.set_mime(Home::MIME_TYPE);
+  Ok(body.into())
+}
+
+#[derive(Template)]
+#[template(path = "login.html")]
+struct Login;
+
+async fn log(req: Request<State>) -> tide::Result {
+  match req.cookie("session") {
+    Some(_) => Ok(Redirect::new("/").into()),
+    None => {
+      let mut body = Body::from_string(Login.render()?);
+      body.set_mime(Home::MIME_TYPE);
+      Ok(body.into())
+    }
+  }
+}
+
+async fn register(mut req: Request<State>) -> tide::Result {
   let user: UserBody = req.body_form().await?;
   let mut state = req.state().lock();
   match state.users.get(&user.username) {
-    Some(_) => Ok("uwer exists uwu".into()),
+    Some(_) => Ok(Redirect::new("/register?err=exists").into()),
     None => {
       state.users.insert(
-        user.username,
+        user.username.clone(),
         User {
           password: bcrypt::hash(user.password, 10)?,
         },
       );
-      Ok("user created".into())
+      let id = Uuid::new_v4();
+      state.sessions.insert(id, user.username);
+      let mut res: Response = Redirect::new("/").into();
+      res.insert_cookie(Cookie::new("session", id.to_string()));
+      Ok(res)
     }
   }
 }
@@ -51,29 +114,25 @@ async fn login(mut req: Request<State>) -> tide::Result {
   match state.users.get(&user.username) {
     Some(u) => {
       if bcrypt::verify(user.password, &u.password)? {
-        let mut res = Response::new(StatusCode::Ok);
         let id = Uuid::new_v4();
         state.sessions.insert(id, user.username);
+        let mut res: Response = Redirect::new("/").into();
         res.insert_cookie(Cookie::new("session", id.to_string()));
         Ok(res)
       } else {
-        Ok("not fart".into())
+        Ok("incorrect pass".into())
       }
     }
-    None => Ok("user no exist".into()),
+    None => Ok("doesnt exist".into()),
   }
 }
 
 async fn logout(req: Request<State>) -> tide::Result {
-  let mut state = req.state().lock();
-  let id = Uuid::parse_str(req.cookie("session").unwrap().value())?;
-  match state.sessions.get(&id) {
-    Some(_) => {
-      state.sessions.remove(&id);
-      let mut res = Response::new(StatusCode::Ok);
-      res.remove_cookie(Cookie::named("session"));
-      Ok(res)
-    }
-    None => Ok("not ok".into()),
-  }
+  // let mut state = req.state().lock();
+  let mut res: Response = Redirect::new("/").into();
+  // if let Some(c) = req.cookie("session") {
+  //   state.sessions.remove(&Uuid::parse_str(c.value())?);
+  //   res.remove_cookie(Cookie::named("session"));
+  // }
+  Ok(res)
 }

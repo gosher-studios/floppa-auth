@@ -37,19 +37,19 @@ impl Deref for StateGuard<'_> {
   type Target = StateInner;
 
   fn deref(&self) -> &StateInner {
-    &*self.0
+    &self.0
   }
 }
 
 impl DerefMut for StateGuard<'_> {
   fn deref_mut(&mut self) -> &mut StateInner {
-    &mut *self.0
+    &mut self.0
   }
 }
 
 impl Drop for StateGuard<'_> {
   fn drop(&mut self) {
-    info!("Saving {}", PATH);
+    info!("Saving '{}'.", PATH);
     bincode::serialize_into(File::create(PATH).unwrap(), &*self.0).unwrap();
   }
 }
