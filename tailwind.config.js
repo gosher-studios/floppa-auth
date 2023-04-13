@@ -6,7 +6,8 @@ module.exports = {
       "fg": "#1a1a1a",
       "hover": "#0a0a0a",
       "accent": "#aaa",
-      "white": "#fff"
+      "white": "#fff",
+      "red": "#bf616a"
     },
     fontFamily: {
       "display": ["Clash Display", "sans-serif"],

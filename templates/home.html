@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
 	<p>hello {{username}}</p>
-	<p>{{num_users}} users</p>
 	<form method="post" action="/auth/logout">
 		<button class="w-full mt-2 rounded-sm text-center bg-bg hover:bg-hover transition-colors cursor-pointer font-semibold" type="submit">Logout</button>
 	</form>
