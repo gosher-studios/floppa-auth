@@ -2,7 +2,7 @@ use tide::{Request, Body};
 use askama::Template;
 use uuid::Uuid;
 use serde::Deserialize;
-use crate::state::State;
+use crate::State;
 
 #[derive(Template)]
 #[template(path = "home.html")]
@@ -18,7 +18,7 @@ struct Login {
 }
 
 pub async fn home(req: Request<State>) -> tide::Result {
-  let state = req.state().lock();
+  let state = req.state().db.get();
   let mut body = Body::from_string(
     match req
       .cookie("session")

@@ -2,12 +2,17 @@
 name = "floppa-auth"
 version = "0.1.0"
 edition = "2021"
+default-run = "floppa-auth"
+
+[[bin]]
+name = "cli"
+path = "cli/main.rs"
 
 [dependencies]
 tide = "0.16"
 tokio = { version = "1.27", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
-bincode = "1.3"
 uuid = { version = "1.3", features = ["v4", "serde"] }
+floppadb = { git = "https://github.com/chxry/data" }
 bcrypt = "0.14"
 askama = "0.11"
