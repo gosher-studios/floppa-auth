@@ -83,6 +83,7 @@ pub async fn sessions(req: Request<State>) -> tide::Result {
     })
     .flatten()
     .unwrap();
+  println!("{}", req.peer_addr().unwrap());
   let new = state
     .sessions
     .iter()
@@ -91,9 +92,10 @@ pub async fn sessions(req: Request<State>) -> tide::Result {
       expiry: f.1.expires.format("%D %R").to_string(),
       ip: f.1.ip.clone(),
       sid: *f.0,
-      location: reqwest::blocking::get("https://ipinfo.io/".to_string() + &f.1.ip.clone()), //   .unwrap()
-                                                                                            //   .json()
-                                                                                            //   .unwrap(),
+      location: reqwest::blocking::get("https://ipinfo.io/".to_string() + &f.1.ip.clone())
+        .unwrap()
+        .json()
+        .unwrap(),
     })
     .collect::<Vec<Session>>();
   let mut body = Body::from_string(Sessions { ses: new }.to_string());
