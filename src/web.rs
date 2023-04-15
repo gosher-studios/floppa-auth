@@ -64,11 +64,11 @@ struct Session {
   expiry: String,
   ip: String,
   sid: Uuid,
-  location: Ip,
+  location: IpInfo,
 }
 
-#[derive(Deserialize)]
-struct Ip {
+#[derive(Deserialize, Default)]
+struct IpInfo {
   city: String,
 }
 
@@ -95,7 +95,7 @@ pub async fn sessions(req: Request<State>) -> tide::Result {
       location: reqwest::blocking::get("https://ipinfo.io/".to_string() + &f.1.ip.clone())
         .unwrap()
         .json()
-        .unwrap(),
+        .unwrap_or_default(),
     })
     .collect::<Vec<Session>>();
   let mut body = Body::from_string(Sessions { ses: new }.to_string());

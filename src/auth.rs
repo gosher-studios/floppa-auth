@@ -62,7 +62,14 @@ pub async fn login(mut req: Request<State>) -> tide::Result {
           Session {
             username: user.username,
             expires: time,
-            ip: req.peer_addr().unwrap().into(),
+            ip: req
+              .peer_addr()
+              .unwrap()
+              .to_string()
+              .split(":")
+              .next()
+              .unwrap()
+              .to_string(),
           },
         );
         let mut res: Response = Redirect::new("/").into();
