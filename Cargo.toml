@@ -16,3 +16,5 @@ uuid = { version = "1.3", features = ["v4", "serde"] }
 floppadb = { git = "https://github.com/chxry/data" }
 bcrypt = "0.14"
 askama = "0.11"
+time = {version = "0.2.25", features = ["serde"]}
+reqwest = {version = "0.11", features = ["json", "blocking"]}

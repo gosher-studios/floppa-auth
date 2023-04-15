@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="space-y divide-y-2 divide-bg">
+  {% for s in ses %}
+     <div class="flex w-full items-center justify-between"> 
+        <div>
+          <p>{{s.location.city}} {{s.ip}}</p>
+          <p class="text-sm">Expires {{s.expiry}}</p>
+        </div>
+        <form method="post" action="/auth/sessions/{{s.sid}}">
+        <button type="submit" class="px-2 mx-4 border bg-fg hover:bg-bg border-red font-semibold rounded-sm">Revoke</button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}
