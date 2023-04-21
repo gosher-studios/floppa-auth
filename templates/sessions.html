@@ -1,16 +1,25 @@
 {% extends "base.html" %}
 {% block content %}
-  <div class="space-y divide-y-2 divide-bg">
-  {% for s in ses %}
-     <div class="flex w-full items-center justify-between"> 
+  <div class="divide-y-2 divide-bg">
+    <p class="text-2xl">Your current sessions:</p>
+    {% for s in sessions %}
+      <div class="p-1 flex w-full items-center justify-between"> 
         <div>
-          <p>{{s.location.city}} {{s.ip}}</p>
+          <p>{% if s.current %}<span class="font-semibold uppercase tracking-wide">Current</span>{% endif %} <span id="ip">{{s.ip}}</span></p>
           <p class="text-sm">Expires {{s.expiry}}</p>
         </div>
-        <form method="post" action="/auth/sessions/{{s.sid}}">
-        <button type="submit" class="px-2 mx-4 border bg-fg hover:bg-bg border-red font-semibold rounded-sm">Revoke</button>
+        <form method="post" action="/auth/sessions/{{s.id}}">
+          <button type="submit" class="px-2 mx-4 bg-fg hover:bg-bg border border-red text-red font-semibold rounded-sm">Revoke</button>
         </form>
       </div>
     {% endfor %}
   </div>
+  <script>
+    document.querySelectorAll("#ip").forEach((ip) => 
+      fetch("https://ipinfo.io/"+ip.innerHTML)
+        .then((res) => res.json())
+        .then((data) => ip.innerHTML = data.city + " " + ip.innerHTML)
+        .catch(() => ip.innerHTML = "??? " + ip.innerHTML)
+    );
+  </script>
 {% endblock %}

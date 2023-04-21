@@ -1,9 +1,9 @@
-use tide::{Request, Body};
+use tide::{Request, Redirect, Body};
 use askama::Template;
 use uuid::Uuid;
 use serde::Deserialize;
-use reqwest;
 use crate::State;
+use crate::auth::auth;
 
 #[derive(Template)]
 #[template(path = "home.html")]
@@ -19,23 +19,16 @@ struct Login {
 }
 
 pub async fn home(req: Request<State>) -> tide::Result {
-  let state = req.state().db.get();
-  let mut body = Body::from_string(
-    match req
-      .cookie("session")
-      .map(|c| state.sessions.get(&Uuid::parse_str(c.value()).unwrap()))
-      .flatten()
-    {
-      Some(u) => Home {
-        username: u.clone().username,
-      }
-      .render()?,
-      None => {
-        let t: Login = req.query()?;
-        t.render()?
-      }
-    },
-  );
+  let mut body = Body::from_string(match auth(&req) {
+    Some((_, s, _)) => Home {
+      username: s.username,
+    }
+    .render()?,
+    None => {
+      let t: Login = req.query()?;
+      t.render()?
+    }
+  });
   body.set_mime(Home::MIME_TYPE);
   Ok(body.into())
 }
@@ -57,48 +50,35 @@ pub async fn register(req: Request<State>) -> tide::Result {
 #[derive(Template)]
 #[template(path = "sessions.html")]
 struct Sessions {
-  ses: Vec<Session>,
+  sessions: Vec<Session>,
 }
 
 struct Session {
   expiry: String,
   ip: String,
-  sid: Uuid,
-  location: IpInfo,
-}
-
-#[derive(Deserialize, Default)]
-struct IpInfo {
-  city: String,
+  id: Uuid,
+  current: bool,
 }
 
 pub async fn sessions(req: Request<State>) -> tide::Result {
-  let state = req.state().db.get();
-  let sessions = req
-    .cookie("session")
-    .map(|c| {
-      state
+  Ok(match auth(&req) {
+    Some((u, s, _)) => {
+      let state = req.state().db.get();
+      let sessions = state
         .sessions
-        .get(&Uuid::parse_str(c.value()).ok().unwrap())
-    })
-    .flatten()
-    .unwrap();
-  println!("{}", req.peer_addr().unwrap());
-  let new = state
-    .sessions
-    .iter()
-    .filter(|e| e.1.username == sessions.username)
-    .map(|f| Session {
-      expiry: f.1.expires.format("%D %R").to_string(),
-      ip: f.1.ip.clone(),
-      sid: *f.0,
-      location: reqwest::blocking::get("https://ipinfo.io/".to_string() + &f.1.ip.clone())
-        .unwrap()
-        .json()
-        .unwrap_or_default(),
-    })
-    .collect::<Vec<Session>>();
-  let mut body = Body::from_string(Sessions { ses: new }.to_string());
-  body.set_mime(Sessions::MIME_TYPE);
-  Ok(body.into())
+        .iter()
+        .filter(|e| e.1.username == s.username)
+        .map(|f| Session {
+          expiry: f.1.expires.format("%D %R"),
+          ip: f.1.ip.clone(),
+          id: *f.0,
+          current: *f.0 == u,
+        })
+        .collect::<Vec<Session>>();
+      let mut body = Body::from_string(Sessions { sessions }.to_string());
+      body.set_mime(Sessions::MIME_TYPE);
+      body.into()
+    }
+    None => Redirect::new("/").into(),
+  })
 }

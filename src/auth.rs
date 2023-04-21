@@ -1,12 +1,11 @@
 use tide::{Request, Response, Redirect};
 use tide::http::Cookie;
 use uuid::Uuid;
+use time::{OffsetDateTime, Duration};
 use serde::Deserialize;
-use floppa_auth::User;
-use floppa_auth::Session;
+use floppa_auth::{User, Session};
 use crate::State;
-use time::OffsetDateTime;
-use time::Duration;
+
 #[derive(Deserialize)]
 struct UserBody {
   username: String,
@@ -26,12 +25,12 @@ pub async fn register(mut req: Request<State>) -> tide::Result {
         },
       );
       let id = Uuid::new_v4();
-      let time = OffsetDateTime::now_utc() + Duration::day();
+      let expires = OffsetDateTime::now_utc() + Duration::day();
       state.sessions.insert(
         id,
         Session {
           username: user.username,
-          expires: time,
+          expires,
           ip: req.peer_addr().unwrap().into(),
         },
       );
@@ -39,9 +38,8 @@ pub async fn register(mut req: Request<State>) -> tide::Result {
       res.insert_cookie(
         Cookie::build("session", id.to_string())
           .http_only(true)
-          .secure(true)
           .path("/")
-          .expires(time)
+          .expires(expires)
           .finish(),
       );
       Ok(res)
@@ -56,17 +54,17 @@ pub async fn login(mut req: Request<State>) -> tide::Result {
     Some(u) => {
       if bcrypt::verify(user.password, &u.password)? {
         let id = Uuid::new_v4();
-        let time = OffsetDateTime::now_utc() + Duration::day();
+        let expires = OffsetDateTime::now_utc() + Duration::day();
         state.sessions.insert(
           id,
           Session {
             username: user.username,
-            expires: time,
+            expires,
             ip: req
               .peer_addr()
               .unwrap()
               .to_string()
-              .split(":")
+              .split(':')
               .next()
               .unwrap()
               .to_string(),
@@ -76,7 +74,6 @@ pub async fn login(mut req: Request<State>) -> tide::Result {
         res.insert_cookie(
           Cookie::build("session", id.to_string())
             .http_only(true)
-            .secure(true)
             .path("/")
             .finish(),
         );
@@ -121,8 +118,7 @@ pub async fn delete_session(req: Request<State>) -> tide::Result {
 
   if let Some(c) = req
     .cookie("session")
-    .map(|c| state.sessions.get(&Uuid::parse_str(c.value()).unwrap()))
-    .flatten()
+    .and_then(|c| state.sessions.get(&Uuid::parse_str(c.value()).unwrap()))
   {
     let uid = Uuid::parse_str(req.param("id").unwrap())?;
     if state.sessions.get(&uid).unwrap().username == c.username {
@@ -131,4 +127,18 @@ pub async fn delete_session(req: Request<State>) -> tide::Result {
   }
 
   Ok(Redirect::new("/sessions").into())
+}
+
+pub fn auth(req: &Request<State>) -> Option<(Uuid, Session, User)> {
+  let state = req.state().db.get();
+  req
+    .cookie("session")
+    .and_then(|c| Uuid::parse_str(c.value()).ok())
+    .and_then(|u| state.sessions.get(&u).map(|s| (u, s)))
+    .and_then(|s| {
+      state
+        .users
+        .get(&s.1.username)
+        .map(|u| (s.0, s.1.clone(), u.clone()))
+    })
 }

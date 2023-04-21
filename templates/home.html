@@ -1,16 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-	<p class="text-center w-full">Logged in as {{username}}</p>
+	<p class="text-2xl">Logged in as <span class="font-semibold">{{username}}</span></p>
 	
 	<form method="get" action="/sessions">
 		<button class="w-full mt-2 rounded-sm text-center bg-bg hover:bg-hover transition-colors cursor-pointer font-semibold" type="submit">View Sessions</button>
 	</form>
-	<form method="post" action="/auth/delete">
-		<button class="w-full mt-2 rounded-sm text-center bg-bg hover:bg-hover transition-colors cursor-pointer font-semibold" type="submit">Delete Account</button>
-	</form>
 	<form method="post" action="/auth/logout">
 		<button class="w-full mt-2 rounded-sm text-center bg-bg hover:bg-hover transition-colors cursor-pointer font-semibold" type="submit">Logout</button>
 	</form>
-	
-	
+	<form method="post" action="/auth/delete">
+		<button class="w-full mt-2 rounded-sm text-center bg-fg hover:bg-bg border border-red text-red transition-colors cursor-pointer font-semibold" type="submit">Delete Account</button>
+	</form>
 {% endblock %}

@@ -4,8 +4,8 @@ mod auth;
 use tide::security::CorsMiddleware;
 use tide::http::headers::HeaderValue;
 use floppadb::Database;
-use floppa_auth::Data;
-use floppa_auth::Result;
+use floppa_auth::{Data, Result};
+
 #[derive(Clone)]
 pub struct State {
   db: Database<Data>,

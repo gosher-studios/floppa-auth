@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use uuid::Uuid;
+use time::OffsetDateTime;
 use serde::{Serialize, Deserialize};
 
 pub type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -18,6 +19,6 @@ pub struct User {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Session {
   pub username: String,
-  pub expires: time::OffsetDateTime,
+  pub expires: OffsetDateTime,
   pub ip: String,
 }
