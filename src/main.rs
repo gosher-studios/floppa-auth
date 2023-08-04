@@ -23,6 +23,7 @@ async fn main() -> Result {
   app.at("/register").get(web::register);
   app.at("/auth/register").post(auth::register);
   app.at("/auth/login").post(auth::login);
+  app.at("/auth/login/").post(auth::login);
   app.at("/auth/logout").post(auth::logout);
   app.at("/auth/delete").post(auth::delete);
   app.at("/auth/sessions/:id").post(auth::delete_session);

@@ -15,6 +15,8 @@ struct UserBody {
 pub async fn register(mut req: Request<State>) -> tide::Result {
   let user: UserBody = req.body_form().await?;
   let mut state = req.state().db.get_mut();
+
+  let url = &req.query::<Link>()?.url;
   match state.users.get(&user.username) {
     Some(_) => Ok(Redirect::new("/register?err=exists").into()),
     None => {
@@ -34,7 +36,11 @@ pub async fn register(mut req: Request<State>) -> tide::Result {
           ip: req.peer_addr().unwrap().into(),
         },
       );
-      let mut res: Response = Redirect::new("/").into();
+      let mut link: String = "/".to_string();
+      if url != "/" {
+        link = url.to_owned() + "?id=" + &id.to_string();
+      }
+      let mut res: Response = Redirect::new(link).into();
       res.insert_cookie(
         Cookie::build("session", id.to_string())
           .http_only(true)
@@ -47,9 +53,14 @@ pub async fn register(mut req: Request<State>) -> tide::Result {
   }
 }
 
+#[derive(Deserialize)]
+struct Link {
+  url: String,
+}
 pub async fn login(mut req: Request<State>) -> tide::Result {
   let user: UserBody = req.body_form().await?;
   let mut state = req.state().db.get_mut();
+  let url = &req.query::<Link>()?.url;
   match state.users.get(&user.username) {
     Some(u) => {
       if bcrypt::verify(user.password, &u.password)? {
@@ -70,7 +81,12 @@ pub async fn login(mut req: Request<State>) -> tide::Result {
               .to_string(),
           },
         );
-        let mut res: Response = Redirect::new("/").into();
+
+        let mut link: String = "/".to_string();
+        if url != "/" {
+          link = url.to_owned() + "?id=" + &id.to_string();
+        }
+        let mut res: Response = Redirect::new(link).into();
         res.insert_cookie(
           Cookie::build("session", id.to_string())
             .http_only(true)

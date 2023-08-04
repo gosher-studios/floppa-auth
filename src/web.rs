@@ -16,6 +16,7 @@ struct Home {
 struct Login {
   #[serde(default)]
   err: String,
+  url: String,
 }
 
 pub async fn home(req: Request<State>) -> tide::Result {
@@ -25,7 +26,10 @@ pub async fn home(req: Request<State>) -> tide::Result {
     }
     .render()?,
     None => {
-      let t: Login = req.query()?;
+      let t: Login = req.query().unwrap_or(Login {
+        err: "".to_string(),
+        url: "/".to_string(),
+      });
       t.render()?
     }
   });
@@ -38,10 +42,14 @@ pub async fn home(req: Request<State>) -> tide::Result {
 struct Register {
   #[serde(default)]
   err: String,
+  url: String,
 }
 
 pub async fn register(req: Request<State>) -> tide::Result {
-  let t: Register = req.query()?;
+  let t: Register = req.query().unwrap_or(Register {
+    err: "".to_string(),
+    url: "/".to_string(),
+  });
   let mut body = Body::from_string(t.render()?);
   body.set_mime(Home::MIME_TYPE);
   Ok(body.into())
