@@ -7,6 +7,7 @@
         <div>
           <p>{% if s.current %}<span class="font-semibold uppercase tracking-wide">Current</span>{% endif %} <span id="ip">{{s.ip}}</span></p>
           <p class="text-sm">Expires {{s.expiry}}</p>
+          <p class="text-sm"> App {{s.app}}
         </div>
         <form method="post" action="/auth/sessions/{{s.id}}">
           <button type="submit" class="px-2 mx-4 bg-fg hover:bg-bg border border-red text-red font-semibold rounded-sm">Revoke</button>

@@ -7,5 +7,8 @@ fn main() -> Result {
   for (name, user) in db.get().users.iter() {
     println!("{} | {}", name, user.password);
   }
+  for (name, meow) in db.get().apps.iter() {
+    println!("{} | {} | {}", name, meow.name, meow.url,);
+  }
   Ok(())
 }

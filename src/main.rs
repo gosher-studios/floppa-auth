@@ -23,10 +23,10 @@ async fn main() -> Result {
   app.at("/register").get(web::register);
   app.at("/auth/register").post(auth::register);
   app.at("/auth/login").post(auth::login);
-  app.at("/auth/login/").post(auth::login);
   app.at("/auth/logout").post(auth::logout);
   app.at("/auth/delete").post(auth::delete);
   app.at("/auth/sessions/:id").post(auth::delete_session);
+  app.at("/meow").post(auth::add_app);
   app.at("/static").serve_dir("static")?;
   app.listen("127.0.0.1:8080").await?;
   Ok(())

@@ -16,7 +16,8 @@ struct Home {
 struct Login {
   #[serde(default)]
   err: String,
-  url: String,
+  appid: String,
+  secret: String,
 }
 
 pub async fn home(req: Request<State>) -> tide::Result {
@@ -28,7 +29,8 @@ pub async fn home(req: Request<State>) -> tide::Result {
     None => {
       let t: Login = req.query().unwrap_or(Login {
         err: "".to_string(),
-        url: "/".to_string(),
+        appid: "floppa-auth".to_string(),
+        secret: "meow".to_string(),
       });
       t.render()?
     }
@@ -66,6 +68,7 @@ struct Session {
   ip: String,
   id: Uuid,
   current: bool,
+  app: String,
 }
 
 pub async fn sessions(req: Request<State>) -> tide::Result {
@@ -81,6 +84,7 @@ pub async fn sessions(req: Request<State>) -> tide::Result {
           ip: f.1.ip.clone(),
           id: *f.0,
           current: *f.0 == u,
+          app: f.1.app.clone(),
         })
         .collect::<Vec<Session>>();
       let mut body = Body::from_string(Sessions { sessions }.to_string());

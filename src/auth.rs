@@ -1,9 +1,9 @@
-use tide::{Request, Response, Redirect};
+use tide::{Request, Response, Redirect, Body};
 use tide::http::Cookie;
 use uuid::Uuid;
 use time::{OffsetDateTime, Duration};
 use serde::Deserialize;
-use floppa_auth::{User, Session};
+use floppa_auth::{User, Session, Apps};
 use crate::State;
 
 #[derive(Deserialize)]
@@ -15,8 +15,6 @@ struct UserBody {
 pub async fn register(mut req: Request<State>) -> tide::Result {
   let user: UserBody = req.body_form().await?;
   let mut state = req.state().db.get_mut();
-
-  let url = &req.query::<Link>()?.url;
   match state.users.get(&user.username) {
     Some(_) => Ok(Redirect::new("/register?err=exists").into()),
     None => {
@@ -34,13 +32,10 @@ pub async fn register(mut req: Request<State>) -> tide::Result {
           username: user.username,
           expires,
           ip: req.peer_addr().unwrap().into(),
+          app: "meow".to_string(),
         },
       );
-      let mut link: String = "/".to_string();
-      if url != "/" {
-        link = url.to_owned() + "?id=" + &id.to_string();
-      }
-      let mut res: Response = Redirect::new(link).into();
+      let mut res: Response = Redirect::new("/").into();
       res.insert_cookie(
         Cookie::build("session", id.to_string())
           .http_only(true)
@@ -60,7 +55,13 @@ struct Link {
 pub async fn login(mut req: Request<State>) -> tide::Result {
   let user: UserBody = req.body_form().await?;
   let mut state = req.state().db.get_mut();
-  let url = &req.query::<Link>()?.url;
+
+  match state.apps.get(req.param("app").unwrap_or("floppa-auth")) {
+    Some(app) => {
+      tide::log::debug!("{}", app.name)
+    }
+    None => println!("tweakin"),
+  };
   match state.users.get(&user.username) {
     Some(u) => {
       if bcrypt::verify(user.password, &u.password)? {
@@ -79,14 +80,11 @@ pub async fn login(mut req: Request<State>) -> tide::Result {
               .next()
               .unwrap()
               .to_string(),
+            app: "fart".to_string(),
           },
         );
 
-        let mut link: String = "/".to_string();
-        if url != "/" {
-          link = url.to_owned() + "?id=" + &id.to_string();
-        }
-        let mut res: Response = Redirect::new(link).into();
+        let mut res: Response = Redirect::new("/").into();
         res.insert_cookie(
           Cookie::build("session", id.to_string())
             .http_only(true)
@@ -157,4 +155,17 @@ pub fn auth(req: &Request<State>) -> Option<(Uuid, Session, User)> {
         .get(&s.1.username)
         .map(|u| (s.0, s.1.clone(), u.clone()))
     })
+}
+
+pub async fn add_app(req: Request<State>) -> tide::Result {
+  let mut state = req.state().db.get_mut();
+  state.apps.insert(
+    "floppa-files".to_string(),
+    Apps {
+      name: "floppa files".to_string(),
+      secret: "meow".to_string(),
+      url: "https://colon3.lol/callback?".to_string(),
+    },
+  );
+  Ok(Redirect::new("/").into())
 }
