@@ -15,9 +15,9 @@ If you're looking to become a user, follow these steps:
 
    **Note:** Ensure that the `url` parameter is correctly formatted as `https://url.com` for it to work properly.
 
-   This request will prompt the hoster of the Floppa auth to set up your app.
 
-2. After successful creation, you'll receive a secret which will be outputted to the console.
+
+2. After successful creation, the hoster will receive a secret which will be outputted to the console.
 
 ## Logging In a User
 
