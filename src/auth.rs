@@ -1,8 +1,6 @@
-use std::arch::aarch64::ST;
-
 use tide::{Request, Response, Redirect, Body, StatusCode};
 use tide::http::Cookie;
-use uuid::Uuid;
+use uuid::{Uuid, uuid};
 use time::{OffsetDateTime, Duration};
 use serde::Deserialize;
 use floppa_auth::{User, Session, Apps};
@@ -26,13 +24,6 @@ impl Default for Query {
       secret: "meow".to_string(),
     }
   }
-}
-
-#[derive(Deserialize)]
-struct AuthQuery {
-  session_id: String,
-  app_secret: String,
-  app_name: String,
 }
 
 pub async fn register(mut req: Request<State>) -> tide::Result {
@@ -219,22 +210,32 @@ pub async fn add_app(req: Request<State>) -> tide::Result {
   Ok(Redirect::new("/").into())
 }
 
+#[derive(Deserialize)]
+struct AuthQuery {
+  ssid: String,
+  secret: String,
+  name: String,
+}
 //TODO third party callback authentication with session
-pub async fn auth_session(mut req: Request<State>) -> tide::Result {
+pub async fn auth_session(req: Request<State>) -> tide::Result {
   let auth_query: AuthQuery = req.query()?;
-  let mut conn = req.state().db.get_mut();
-
-  Ok(match conn.sessions.get(auth_query.session_id) {
-    Some(session) if session.expires > OffsetDateTime::now_utc() => {
-      match conn.apps.get(&auth_query.app_name) {
-        Some(app) if app.secret == auth_query.app_secret => Response::builder(StatusCode::Ok)
-          .body(session.username)
-          .build(),
-        Some(_) => Response::new(StatusCode::Unauthorized),
-        None => Response::new(StatusCode::NotFound),
+  let state = req.state().db.get_mut();
+  Ok(
+    match state
+      .sessions
+      .get(&Uuid::parse_str(&auth_query.ssid).unwrap())
+    {
+      Some(session) if session.expires > OffsetDateTime::now_utc() => {
+        match state.apps.get(&auth_query.name) {
+          Some(app) if app.secret == auth_query.secret => Response::builder(StatusCode::Ok)
+            .body(session.username.to_owned())
+            .build(),
+          Some(_) => Response::new(StatusCode::Unauthorized),
+          None => Response::new(StatusCode::NotFound),
+        }
       }
-    }
-    Some(_) => Response::new(StatusCode::Unauthorized),
-    None => Response::new(StatusCode::NotFound),
-  })
+      Some(_) => Response::new(StatusCode::Unauthorized),
+      None => Response::new(StatusCode::NotFound),
+    },
+  )
 }
