@@ -226,7 +226,7 @@ pub async fn auth_session(req: Request<State>) -> tide::Result {
   Ok(
     match state.sessions.get(&Uuid::from_str(&auth_query.ssid)?) {
       Some(session) if session.expires > OffsetDateTime::now_utc() => {
-        match state.apps.get(&auth_query.ssid) {
+        match state.apps.get(&auth_query.name) {
           Some(app) if app.secret == auth_query.secret => Response::builder(StatusCode::Ok)
             .body(session.username.clone())
             .build(),

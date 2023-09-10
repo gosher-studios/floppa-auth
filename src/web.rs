@@ -1,7 +1,7 @@
 use tide::{Request, Redirect, Body, Response, StatusCode};
 use askama::Template;
 use std::str::FromStr;
-use time::OffsetDateTime;
+use time::{OffsetDateTime, Duration};
 use uuid::Uuid;
 use serde::Deserialize;
 use crate::State;
@@ -10,12 +10,8 @@ use crate::auth::auth;
 #[template(path = "home.html")]
 struct Home {
   username: String,
-}
-
-#[derive(Deserialize)]
-struct LoginQuery {
-  appid: String,
-  secret: String,
+  redirect: bool,
+  url: String,
 }
 
 #[derive(Template, Deserialize)]
@@ -28,58 +24,73 @@ struct Login {
 }
 
 pub async fn home(req: Request<State>) -> tide::Result {
-  match req.query::<LoginQuery>() {
-    Ok(query) => {
-      println!("REAL");
-      let state = req.state().db.get_mut();
-      let username = match req.cookie("session_id") {
-        Some(session_id) => match state
-          .sessions
-          .get(&Uuid::from_str(&session_id.value().to_string())?)
-        {
-          Some(session) => session.username.clone(),
-          None => return Ok(Response::new(StatusCode::Unauthorized)),
-        },
-        None => return Ok(Response::new(StatusCode::Unauthorized)),
-      };
-
-      match state.apps.get(&query.appid) {
-        Some(app) if app.secret == query.secret => {
-          let id = Uuid::new_v4();
-          let session: floppa_auth::Session = floppa_auth::Session {
-            expires: OffsetDateTime::now_utc(),
-            username: username,
-            ip: req.peer_addr().unwrap().into(),
-            app: query.appid,
-          };
-          req.state().db.get_mut().sessions.insert(id, session);
-          return Ok(Redirect::new(app.url.clone()).into());
+  let mut body = Body::from_string(match auth(&req) {
+    Some((_, s, _)) => {
+      let mut state = req.state().db.get_mut();
+      let query: Login = req.query().unwrap_or(Login {
+        err: "".to_string(),
+        appid: "".to_string(),
+        secret: "".to_string(),
+      });
+      match state.clone().apps.get(&query.appid) {
+        Some(d) => {
+          let secret = &d.clone().to_owned().secret;
+          if &query.secret == secret {
+            let id = Uuid::new_v4();
+            let expires = OffsetDateTime::now_utc() + Duration::day();
+            state.sessions.insert(
+              id,
+              floppa_auth::Session {
+                username: "meow".to_string(),
+                expires,
+                ip: req
+                  .peer_addr()
+                  .unwrap()
+                  .to_string()
+                  .split(':')
+                  .next()
+                  .unwrap()
+                  .to_string(),
+                app: query.appid,
+              },
+            );
+            let url: String = format!("{}id={}", &d.url, id);
+            let t: Home = Home {
+              username: s.username,
+              redirect: true,
+              url,
+            };
+            t.render()?
+          } else {
+            let t: Home = Home {
+              username: s.username,
+              redirect: false,
+              url: "".to_string(),
+            };
+            t.render()?
+          }
         }
-        Some(_) => return Ok(Response::new(StatusCode::NotFound)),
-        None => return Ok(Response::new(StatusCode::NotFound)),
-      }
-    }
-    Err(_) => {
-      println!("Other");
-      let mut body = Body::from_string(match auth(&req) {
-        Some((_, s, _)) => Home {
-          username: s.username,
-        }
-        .render()?,
         None => {
-          let t: Login = req.query().unwrap_or(Login {
-            err: "".to_string(),
-            appid: "floppa-auth".to_string(),
-            secret: "mrrow".to_string(),
-          });
-          println!("{}", &t.appid);
+          let t: Home = Home {
+            username: s.username,
+            redirect: false,
+            url: "".to_string(),
+          };
           t.render()?
         }
-      });
-      body.set_mime(Home::MIME_TYPE);
-      return Ok(body.into());
+      }
     }
-  };
+    None => {
+      let t: Login = req.query().unwrap_or(Login {
+        err: "".to_string(),
+        appid: "floppa-auth".to_string(),
+        secret: "mrrow".to_string(),
+      });
+      t.render()?
+    }
+  });
+  body.set_mime(Home::MIME_TYPE);
+  return Ok(body.into());
 }
 
 #[derive(Template, Deserialize)]
