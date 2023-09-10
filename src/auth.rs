@@ -11,48 +11,6 @@ struct UserBody {
   username: String,
   password: String,
 }
-
-pub async fn register(mut req: Request<State>) -> tide::Result {
-  let user: UserBody = req.body_form().await?;
-  let mut state = req.state().db.get_mut();
-  match state.users.get(&user.username) {
-    Some(_) => Ok(Redirect::new("/register?err=exists").into()),
-    None => {
-      state.users.insert(
-        user.username.clone(),
-        User {
-          password: bcrypt::hash(user.password, 10)?,
-        },
-      );
-      let id = Uuid::new_v4();
-      let expires = OffsetDateTime::now_utc() + Duration::day();
-      state.sessions.insert(
-        id,
-        Session {
-          username: user.username,
-          expires,
-          ip: req.peer_addr().unwrap().into(),
-          app: "meow".to_string(),
-        },
-      );
-      let mut res: Response = Redirect::new("/").into();
-      res.insert_cookie(
-        Cookie::build("session", id.to_string())
-          .http_only(true)
-          .path("/")
-          .expires(expires)
-          .finish(),
-      );
-      Ok(res)
-    }
-  }
-}
-
-#[derive(Deserialize)]
-struct Link {
-  url: String,
-}
-
 #[derive(Deserialize)]
 #[serde(default)]
 struct Query {
@@ -67,11 +25,60 @@ impl Default for Query {
     }
   }
 }
+
+pub async fn register(mut req: Request<State>) -> tide::Result {
+  let user: UserBody = req.body_form().await?;
+  let mut state = req.state().db.get_mut();
+  let query: Query = req.query().unwrap_or_default();
+  let mut url: String = "/".to_string();
+  match state.users.get(&user.username) {
+    Some(_) => Ok(Redirect::new("/register?err=exists").into()),
+    None => {
+      state.users.insert(
+        user.username.clone(),
+        User {
+          password: bcrypt::hash(user.password, 10)?,
+        },
+      );
+      let id = Uuid::new_v4();
+      let expires = OffsetDateTime::now_utc() + Duration::day();
+      match state.apps.get(&query.app) {
+        Some(app) => {
+          if query.secret == app.secret {
+            url = app.url.to_owned();
+            url += &("id=".to_string() + &id.to_string());
+          } else {
+            url = "/".to_string();
+          }
+        }
+        None => println!("error"),
+      };
+      state.sessions.insert(
+        id,
+        Session {
+          username: user.username,
+          expires,
+          ip: req.peer_addr().unwrap().into(),
+          app: query.app,
+        },
+      );
+      let mut res: Response = Redirect::new(url).into();
+      res.insert_cookie(
+        Cookie::build("session", id.to_string())
+          .http_only(true)
+          .path("/")
+          .expires(expires)
+          .finish(),
+      );
+      Ok(res)
+    }
+  }
+}
+
 pub async fn login(mut req: Request<State>) -> tide::Result {
   let user: UserBody = req.body_form().await?;
   let mut state = req.state().db.get_mut();
   let query: Query = req.query().unwrap_or_default();
-  println!("{} | {} ", &query.app, &query.secret);
   let mut url: String = "/".to_string();
   match state.users.get(&user.username) {
     Some(u) => {
@@ -180,13 +187,24 @@ pub fn auth(req: &Request<State>) -> Option<(Uuid, Session, User)> {
     })
 }
 
+#[derive(Deserialize)]
+struct Meow {
+  name: String,
+  url: String,
+}
 pub async fn add_app(req: Request<State>) -> tide::Result {
   let mut state = req.state().db.get_mut();
+  let query: Meow = req.query()?;
+  let id = Uuid::new_v4().to_string();
+  println!(
+    "App {} created with callback url {} and secret {}",
+    &query.name, &query.url, &id
+  );
   state.apps.insert(
-    "floppa-files".to_string(),
+    query.name,
     Apps {
-      secret: "mrrow".to_string(),
-      url: "https://colon3.lol/callback?".to_string(),
+      secret: id,
+      url: query.url,
     },
   );
   Ok(Redirect::new("/").into())

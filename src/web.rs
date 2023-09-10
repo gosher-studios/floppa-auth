@@ -30,7 +30,7 @@ pub async fn home(req: Request<State>) -> tide::Result {
       let t: Login = req.query().unwrap_or(Login {
         err: "".to_string(),
         appid: "floppa-auth".to_string(),
-        secret: "mrrower".to_string(),
+        secret: "mrrow".to_string(),
       });
       println!("{}", &t.appid);
       t.render()?
@@ -45,13 +45,15 @@ pub async fn home(req: Request<State>) -> tide::Result {
 struct Register {
   #[serde(default)]
   err: String,
-  url: String,
+  appid: String,
+  secret: String,
 }
 
 pub async fn register(req: Request<State>) -> tide::Result {
   let t: Register = req.query().unwrap_or(Register {
     err: "".to_string(),
-    url: "/".to_string(),
+    appid: "floppa-auth".to_string(),
+    secret: "mrrow".to_string(),
   });
   let mut body = Body::from_string(t.render()?);
   body.set_mime(Home::MIME_TYPE);
