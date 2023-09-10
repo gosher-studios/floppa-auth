@@ -1,14 +1,33 @@
 {% extends "base.html" %}
 {% block content %}
-	<p class="text-2xl">Logged in as <span class="font-semibold">{{username}}</span></p>
-	
-	<form method="get" action="/sessions">
-		<button class="w-full mt-2 rounded-sm text-center bg-bg hover:bg-hover transition-colors cursor-pointer font-semibold" type="submit">View Sessions</button>
-	</form>
-	<form method="post" action="/auth/logout">
-		<button class="w-full mt-2 rounded-sm text-center bg-bg hover:bg-hover transition-colors cursor-pointer font-semibold" type="submit">Logout</button>
-	</form>
-	<form method="post" action="/auth/delete">
-		<button class="w-full mt-2 rounded-sm text-center bg-fg hover:bg-bg border border-red text-red transition-colors cursor-pointer font-semibold" type="submit">Delete Account</button>
-	</form>
+<p class="text-2xl">Logged in as <span class="font-semibold">{{username}}</span></p>
+
+<form method="get" action="/sessions">
+	<button
+		class="w-full mt-2 rounded-sm text-center bg-bg hover:bg-hover transition-colors cursor-pointer font-semibold"
+		type="submit">View Sessions</button>
+</form>
+<form method="post" action="/auth/logout">
+	<button
+		class="w-full mt-2 rounded-sm text-center bg-bg hover:bg-hover transition-colors cursor-pointer font-semibold"
+		type="submit">Logout</button>
+</form>
+<form id="delete-form">
+	<button
+		class="w-full mt-2 rounded-sm text-center bg-fg hover:bg-bg border border-red text-red transition-colors cursor-pointer font-semibold"
+		type="submit">Delete Account</button>
+</form>
+<script>
+	const delete_form = document.getElementById("delete-form");
+	delete_form.addEventListener("submit", async e => {
+		e.preventDefault();
+		if (confirm("Are you sure you want do delete your account this is permenent anand cannot be undone")) {
+			let res = await fetch("/auth/delete", {
+				method: "POST",
+				credentials: "same-origin",
+			})
+			location.reload();
+		}
+	})
+</script>
 {% endblock %}
