@@ -25,6 +25,7 @@ async fn main() -> Result {
   app.at("/auth/login").post(auth::login);
   app.at("/auth/logout").post(auth::logout);
   app.at("/auth/delete").post(auth::delete);
+  app.at("/auth").get(auth::auth_session);
   app.at("/auth/sessions/:id").post(auth::delete_session);
   app.at("/meow").post(auth::add_app);
   app.at("/static").serve_dir("static")?;

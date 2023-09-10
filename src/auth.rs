@@ -1,4 +1,6 @@
-use tide::{Request, Response, Redirect, Body};
+use std::arch::aarch64::ST;
+
+use tide::{Request, Response, Redirect, Body, StatusCode};
 use tide::http::Cookie;
 use uuid::Uuid;
 use time::{OffsetDateTime, Duration};
@@ -24,6 +26,13 @@ impl Default for Query {
       secret: "meow".to_string(),
     }
   }
+}
+
+#[derive(Deserialize)]
+struct AuthQuery {
+  session_id: String,
+  app_secret: String,
+  app_name: String,
 }
 
 pub async fn register(mut req: Request<State>) -> tide::Result {
@@ -211,3 +220,21 @@ pub async fn add_app(req: Request<State>) -> tide::Result {
 }
 
 //TODO third party callback authentication with session
+pub async fn auth_session(mut req: Request<State>) -> tide::Result {
+  let auth_query: AuthQuery = req.query()?;
+  let mut conn = req.state().db.get_mut();
+
+  Ok(match conn.sessions.get(auth_query.session_id) {
+    Some(session) if session.expires > OffsetDateTime::now_utc() => {
+      match conn.apps.get(&auth_query.app_name) {
+        Some(app) if app.secret == auth_query.app_secret => Response::builder(StatusCode::Ok)
+          .body(session.username)
+          .build(),
+        Some(_) => Response::new(StatusCode::Unauthorized),
+        None => Response::new(StatusCode::NotFound),
+      }
+    }
+    Some(_) => Response::new(StatusCode::Unauthorized),
+    None => Response::new(StatusCode::NotFound),
+  })
+}
