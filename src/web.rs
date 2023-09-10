@@ -41,7 +41,7 @@ pub async fn home(req: Request<State>) -> tide::Result {
             state.sessions.insert(
               id,
               floppa_auth::Session {
-                username: "meow".to_string(),
+                username: s.clone().username,
                 expires,
                 ip: req
                   .peer_addr()
