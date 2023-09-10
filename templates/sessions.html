@@ -16,11 +16,12 @@
     {% endfor %}
   </div>
   <script>
-    document.querySelectorAll("#ip").forEach((ip) => 
-      fetch("https://ipinfo.io/"+ip.innerHTML)
+    document.querySelectorAll("#ip").forEach((ip) => {
+      let new = ip.innerHTML.split(":");
+      fetch("https://ipinfo.io/"+new[0])
         .then((res) => res.json())
-        .then((data) => ip.innerHTML = data.city + " " + ip.innerHTML)
-        .catch(() => ip.innerHTML = "??? " + ip.innerHTML)
+        .then((data) => ip.innerHTML = data.city)
+        .catch(() => ip.innerHTML = "??? " + new[0])}
     );
   </script>
 {% endblock %}
