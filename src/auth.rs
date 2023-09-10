@@ -42,7 +42,7 @@ pub async fn register(mut req: Request<State>) -> tide::Result {
         },
       );
       let id = Uuid::new_v4();
-      let expires = OffsetDateTime::now_utc() + Duration::day();
+      let expires = OffsetDateTime::now_utc() + Duration::week();
       match state.apps.get(&query.app) {
         Some(app) => {
           if query.secret == app.secret {
@@ -85,7 +85,7 @@ pub async fn login(mut req: Request<State>) -> tide::Result {
     Some(u) => {
       if bcrypt::verify(user.password, &u.password)? {
         let id = Uuid::new_v4();
-        let expires = OffsetDateTime::now_utc() + Duration::day();
+        let expires = OffsetDateTime::now_utc() + Duration::week();
 
         match state.apps.get(&query.app) {
           Some(app) => {
