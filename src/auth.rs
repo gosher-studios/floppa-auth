@@ -1,5 +1,6 @@
 use tide::{Request, Response, Redirect, StatusCode};
-use tide::http::Cookie;
+use tide::http::{Cookie, mime};
+use tide::convert::json;
 use uuid::Uuid;
 use std::str::FromStr;
 use time::{OffsetDateTime, Duration};
@@ -228,7 +229,8 @@ pub async fn auth_session(req: Request<State>) -> tide::Result {
       Some(session) if session.expires > OffsetDateTime::now_utc() => {
         match state.apps.get(&auth_query.name) {
           Some(app) if app.secret == auth_query.secret => Response::builder(StatusCode::Ok)
-            .body(session.username.clone())
+            .body(json!({"username":session.clone().username,"app":session.clone().app}))
+            .content_type(mime::JSON)
             .build(),
           Some(_) => {
             state.sessions.remove(&Uuid::from_str(&auth_query.secret)?);
