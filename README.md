@@ -14,5 +14,6 @@ this id is their current session id which will last for 14 days
 add it as a cookie or into local storage idrc
 
 
-to check if session is still valid send a GET Request to URL/unknown
-i will finish this in a sec lemme lunch :3
+to check if session is still valid send a GET Request to URL/auth with parameteres ssid,secret,name being the session ID, the app secret and the app name
+if successful it should return status code 200 with the body being the username of the user
+if not successful it will return 401 or 404 depending on what happened
