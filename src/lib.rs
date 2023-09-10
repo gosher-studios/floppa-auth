@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use tide::http::Url;
 use uuid::Uuid;
 use time::OffsetDateTime;
 use serde::{Serialize, Deserialize};

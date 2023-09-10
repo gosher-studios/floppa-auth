@@ -1,14 +1,21 @@
-use tide::{Request, Redirect, Body};
+use tide::{Request, Redirect, Body, Response, StatusCode};
 use askama::Template;
+use std::str::FromStr;
+use time::OffsetDateTime;
 use uuid::Uuid;
 use serde::Deserialize;
 use crate::State;
 use crate::auth::auth;
-
 #[derive(Template)]
 #[template(path = "home.html")]
 struct Home {
   username: String,
+}
+
+#[derive(Deserialize)]
+struct LoginQuery {
+  appid: String,
+  secret: String,
 }
 
 #[derive(Template, Deserialize)]
@@ -21,23 +28,58 @@ struct Login {
 }
 
 pub async fn home(req: Request<State>) -> tide::Result {
-  let mut body = Body::from_string(match auth(&req) {
-    Some((_, s, _)) => Home {
-      username: s.username,
+  match req.query::<LoginQuery>() {
+    Ok(query) => {
+      println!("REAL");
+      let state = req.state().db.get_mut();
+      let username = match req.cookie("session_id") {
+        Some(session_id) => match state
+          .sessions
+          .get(&Uuid::from_str(&session_id.value().to_string())?)
+        {
+          Some(session) => session.username.clone(),
+          None => return Ok(Response::new(StatusCode::Unauthorized)),
+        },
+        None => return Ok(Response::new(StatusCode::Unauthorized)),
+      };
+
+      match state.apps.get(&query.appid) {
+        Some(app) if app.secret == query.secret => {
+          let id = Uuid::new_v4();
+          let session: floppa_auth::Session = floppa_auth::Session {
+            expires: OffsetDateTime::now_utc(),
+            username: username,
+            ip: req.peer_addr().unwrap().into(),
+            app: query.appid,
+          };
+          req.state().db.get_mut().sessions.insert(id, session);
+          return Ok(Redirect::new(app.url.clone()).into());
+        }
+        Some(_) => return Ok(Response::new(StatusCode::NotFound)),
+        None => return Ok(Response::new(StatusCode::NotFound)),
+      }
     }
-    .render()?,
-    None => {
-      let t: Login = req.query().unwrap_or(Login {
-        err: "".to_string(),
-        appid: "floppa-auth".to_string(),
-        secret: "mrrow".to_string(),
+    Err(_) => {
+      println!("Other");
+      let mut body = Body::from_string(match auth(&req) {
+        Some((_, s, _)) => Home {
+          username: s.username,
+        }
+        .render()?,
+        None => {
+          let t: Login = req.query().unwrap_or(Login {
+            err: "".to_string(),
+            appid: "floppa-auth".to_string(),
+            secret: "mrrow".to_string(),
+          });
+          println!("{}", &t.appid);
+          t.render()?
+        }
       });
-      println!("{}", &t.appid);
-      t.render()?
+      body.set_mime(Home::MIME_TYPE);
+      return Ok(body.into());
     }
-  });
-  body.set_mime(Home::MIME_TYPE);
-  Ok(body.into())
+  };
 }
 
 #[derive(Template, Deserialize)]

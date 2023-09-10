@@ -27,13 +27,6 @@ impl Default for Query {
   }
 }
 
-#[derive(Deserialize)]
-struct AuthQuery {
-  session_id: String,
-  app_secret: String,
-  app_name: String,
-}
-
 pub async fn register(mut req: Request<State>) -> tide::Result {
   let user: UserBody = req.body_form().await?;
   let mut state = req.state().db.get_mut();
@@ -218,22 +211,27 @@ pub async fn add_app(req: Request<State>) -> tide::Result {
   Ok(Redirect::new("/").into())
 }
 
+#[derive(Deserialize)]
+struct AuthQuery {
+  ssid: String,
+  secret: String,
+  name: String,
+}
+
 //TODO third party callback authentication with session
 pub async fn auth_session(req: Request<State>) -> tide::Result {
   let auth_query: AuthQuery = req.query()?;
-  let mut conn = req.state().db.get_mut();
+  let mut state = req.state().db.get_mut();
 
   Ok(
-    match conn.sessions.get(&Uuid::from_str(&auth_query.session_id)?) {
+    match state.sessions.get(&Uuid::from_str(&auth_query.ssid)?) {
       Some(session) if session.expires > OffsetDateTime::now_utc() => {
-        match conn.apps.get(&auth_query.app_name) {
-          Some(app) if app.secret == auth_query.app_secret => Response::builder(StatusCode::Ok)
+        match state.apps.get(&auth_query.ssid) {
+          Some(app) if app.secret == auth_query.secret => Response::builder(StatusCode::Ok)
             .body(session.username.clone())
             .build(),
           Some(_) => {
-            conn
-              .sessions
-              .remove(&Uuid::from_str(&auth_query.session_id)?);
+            state.sessions.remove(&Uuid::from_str(&auth_query.secret)?);
             Response::new(StatusCode::Unauthorized)
           }
           None => Response::new(StatusCode::NotFound),
