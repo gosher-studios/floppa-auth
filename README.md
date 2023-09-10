@@ -36,4 +36,4 @@ To verify if a session is still valid, send a GET Request to the `URL/auth` endp
 - `secret`: App secret
 - `name`: App name
 
-If the request is successful, it will return a status code `200` with the body containing the username of the user. If not, it will return either `401` or `404` depending on the error.
+If the request is successful, it will return a status code `200` with the body containing the username of the user and the name of the app from which the session was created . If not, it will return either `401` or `404` depending on the error.
