@@ -3,17 +3,37 @@ authentication for all **gosher studios** trademark software starting now
 
 
 
-how to use if you are trying to be a user.
-create an app by asking the hoster of the floppa auth to make you a thing through a POST Request to URL/meow?name=name&url=url
-url must be formatted like https://url.com? or it won't work
-there will be output to console of the secret
+# Usage Instructions
 
-then when need login user - redirect user to url/?appid={your apps name}&secret={your secret(this is slightly unsafe i will fix)} and then 
-user will be redirected to {callback url}?id={id}
-this id is their current session id which will last for 14 days
-add it as a cookie or into local storage idrc
+## Creating a User Account
 
+If you're looking to become a user, follow these steps:
 
-to check if session is still valid send a GET Request to URL/auth with parameteres ssid,secret,name being the session ID, the app secret and the app name
-if successful it should return status code 200 with the body being the username of the user
-if not successful it will return 401 or 404 depending on what happened
+1. Create an app by sending a POST Request to the `URL/meow` endpoint with the following parameters:
+   - `name`: Your desired app name.
+   - `url`: The callback URL formatted as `https://url.com`.
+
+   **Note:** Ensure that the `url` parameter is correctly formatted as `https://url.com` for it to work properly.
+
+   This request will prompt the hoster of the Floppa auth to set up your app.
+
+2. After successful creation, you'll receive a secret which will be outputted to the console.
+
+## Logging In a User
+
+To log in a user, follow these steps:
+
+1. Redirect the user to `url/?appid={your app's name}&secret={your secret}`. 
+   - **Note:** Using the secret in the URL is considered slightly unsafe; it will be addressed in future updates.
+
+2. The user will be redirected to `{callback url}?id={id}`. This `id` represents their current session ID, which will remain valid for 14 days. You can store it as a cookie or in local storage.
+
+## Checking Session Validity
+
+To verify if a session is still valid, send a GET Request to the `URL/auth` endpoint with the following parameters:
+
+- `ssid`: Session ID
+- `secret`: App secret
+- `name`: App name
+
+If the request is successful, it will return a status code `200` with the body containing the username of the user. If not, it will return either `401` or `404` depending on the error.
