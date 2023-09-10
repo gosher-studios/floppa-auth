@@ -17,12 +17,12 @@
   </div>
   <script>
       document.querySelectorAll("#ip").forEach((ip) => {
-      const new = ip.innerHTML.split(":");
-      console.log(new);
-      fetch("https://ipinfo.io/"+new[0])
+      const meow = ip.innerHTML.split(":");
+      console.log(meow);
+      fetch("https://ipinfo.io/"+meow[0])
         .then((res) => res.json())
         .then((data) => ip.innerHTML = data.city)
-        .catch(() => ip.innerHTML = "??? " + new[0])}
+        .catch(() => ip.innerHTML = "??? " + meow[0])}
     );
   </script>
 {% endblock %}
