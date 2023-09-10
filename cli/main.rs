@@ -8,7 +8,7 @@ fn main() -> Result {
     println!("{} | {}", name, user.password);
   }
   for (name, meow) in db.get().apps.iter() {
-    println!("{} | {} | {}", name, meow.name, meow.url,);
+    println!("{} | {} | {}", name, meow.secret, meow.url,);
   }
   Ok(())
 }

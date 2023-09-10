@@ -52,21 +52,44 @@ pub async fn register(mut req: Request<State>) -> tide::Result {
 struct Link {
   url: String,
 }
+
+#[derive(Deserialize)]
+#[serde(default)]
+struct Query {
+  app: String,
+  secret: String,
+}
+impl Default for Query {
+  fn default() -> Self {
+    Self {
+      app: "floppa-auth".to_string(),
+      secret: "meow".to_string(),
+    }
+  }
+}
 pub async fn login(mut req: Request<State>) -> tide::Result {
   let user: UserBody = req.body_form().await?;
   let mut state = req.state().db.get_mut();
-
-  match state.apps.get(req.param("app").unwrap_or("floppa-auth")) {
-    Some(app) => {
-      tide::log::debug!("{}", app.name)
-    }
-    None => println!("tweakin"),
-  };
+  let query: Query = req.query().unwrap_or_default();
+  println!("{} | {} ", &query.app, &query.secret);
+  let mut url: String = "/".to_string();
   match state.users.get(&user.username) {
     Some(u) => {
       if bcrypt::verify(user.password, &u.password)? {
         let id = Uuid::new_v4();
         let expires = OffsetDateTime::now_utc() + Duration::day();
+
+        match state.apps.get(&query.app) {
+          Some(app) => {
+            if query.secret == app.secret {
+              url = app.url.to_owned();
+              url += &("id=".to_string() + &id.to_string());
+            } else {
+              url = "/".to_string();
+            }
+          }
+          None => println!("error"),
+        };
         state.sessions.insert(
           id,
           Session {
@@ -80,11 +103,11 @@ pub async fn login(mut req: Request<State>) -> tide::Result {
               .next()
               .unwrap()
               .to_string(),
-            app: "fart".to_string(),
+            app: query.app,
           },
         );
 
-        let mut res: Response = Redirect::new("/").into();
+        let mut res: Response = Redirect::new(url).into();
         res.insert_cookie(
           Cookie::build("session", id.to_string())
             .http_only(true)
@@ -162,10 +185,11 @@ pub async fn add_app(req: Request<State>) -> tide::Result {
   state.apps.insert(
     "floppa-files".to_string(),
     Apps {
-      name: "floppa files".to_string(),
-      secret: "meow".to_string(),
+      secret: "mrrow".to_string(),
       url: "https://colon3.lol/callback?".to_string(),
     },
   );
   Ok(Redirect::new("/").into())
 }
+
+//TODO third party callback authentication with session

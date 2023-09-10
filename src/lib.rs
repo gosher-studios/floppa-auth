@@ -29,6 +29,5 @@ pub struct Session {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Apps {
   pub secret: String,
-  pub name: String,
   pub url: String,
 }

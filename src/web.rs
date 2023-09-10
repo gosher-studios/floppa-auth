@@ -30,8 +30,9 @@ pub async fn home(req: Request<State>) -> tide::Result {
       let t: Login = req.query().unwrap_or(Login {
         err: "".to_string(),
         appid: "floppa-auth".to_string(),
-        secret: "meow".to_string(),
+        secret: "mrrower".to_string(),
       });
+      println!("{}", &t.appid);
       t.render()?
     }
   });
