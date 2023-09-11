@@ -30,7 +30,8 @@
 	const delete_form = document.getElementById("delete-form");
 	delete_form.addEventListener("submit", async e => {
 		e.preventDefault();
-		if (confirm("Are you sure you want do delete your account this is permenent anand cannot be undone")) {
+		if (confirm("Are you sure you want do delete your account this is permanent and cannot be undone")) {
+		
 			let res = await fetch("/auth/delete", {
 				method: "POST",
 				credentials: "same-origin",
