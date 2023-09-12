@@ -1,6 +1,5 @@
 use tide::{Request, Redirect, Body, Response, StatusCode};
 use askama::Template;
-use std::str::FromStr;
 use time::{OffsetDateTime, Duration};
 use uuid::Uuid;
 use serde::Deserialize;
@@ -24,18 +23,23 @@ struct Login {
 }
 
 pub async fn home(req: Request<State>) -> tide::Result {
+  let secret: String = match req.header("Authorization") {
+    Some(secret) => secret,
+    None => return Ok(Response::new(StatusCode::Unauthorized)),
+  }
+  .to_string();
   let mut body = Body::from_string(match auth(&req) {
     Some((_, s, _)) => {
       let mut state = req.state().db.get_mut();
       let query: Login = req.query().unwrap_or(Login {
         err: "".to_string(),
         appid: "".to_string(),
-        secret: "".to_string(),
+        secret,
       });
       match state.clone().apps.get(&query.appid) {
         Some(d) => {
-          let secret = &d.clone().to_owned().secret;
-          if &query.secret == secret {
+          let app_secret = &d.clone().to_owned().secret;
+          if &query.secret == app_secret {
             let id = Uuid::new_v4();
             let expires = OffsetDateTime::now_utc() + Duration::day();
             state.sessions.insert(
@@ -84,7 +88,7 @@ pub async fn home(req: Request<State>) -> tide::Result {
       let t: Login = req.query().unwrap_or(Login {
         err: "".to_string(),
         appid: "floppa-auth".to_string(),
-        secret: "mrrow".to_string(),
+        secret,
       });
       t.render()?
     }
@@ -106,7 +110,11 @@ pub async fn register(req: Request<State>) -> tide::Result {
   let t: Register = req.query().unwrap_or(Register {
     err: "".to_string(),
     appid: "floppa-auth".to_string(),
-    secret: "mrrow".to_string(),
+    secret: match req.header("Authorization") {
+      Some(secret) => secret,
+      None => return Ok(Response::new(StatusCode::Unauthorized)),
+    }
+    .to_string(),
   });
   let mut body = Body::from_string(t.render()?);
   body.set_mime(Home::MIME_TYPE);

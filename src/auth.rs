@@ -17,13 +17,11 @@ struct UserBody {
 #[serde(default)]
 struct Query {
   app: String,
-  secret: String,
 }
 impl Default for Query {
   fn default() -> Self {
     Self {
       app: "floppa-auth".to_string(),
-      secret: "meow".to_string(),
     }
   }
 }
@@ -32,6 +30,11 @@ pub async fn register(mut req: Request<State>) -> tide::Result {
   let user: UserBody = req.body_form().await?;
   let mut state = req.state().db.get_mut();
   let query: Query = req.query().unwrap_or_default();
+  let secret = match req.header("Authorization") {
+    Some(secret) => secret,
+    None => return Ok(Response::new(StatusCode::Unauthorized)),
+  }
+  .to_string();
   let mut url: String = "/".to_string();
   match state.users.get(&user.username) {
     Some(_) => Ok(Redirect::new("/register?err=exists").into()),
@@ -46,7 +49,7 @@ pub async fn register(mut req: Request<State>) -> tide::Result {
       let expires = OffsetDateTime::now_utc() + Duration::week();
       match state.apps.get(&query.app) {
         Some(app) => {
-          if query.secret == app.secret {
+          if secret == app.secret {
             url = app.url.to_owned();
             url += &("id=".to_string() + &id.to_string());
           } else {
@@ -81,6 +84,11 @@ pub async fn login(mut req: Request<State>) -> tide::Result {
   let user: UserBody = req.body_form().await?;
   let mut state = req.state().db.get_mut();
   let query: Query = req.query().unwrap_or_default();
+  let secret = match req.header("Authorization") {
+    Some(s) => s,
+    None => return Ok(Response::new(StatusCode::Unauthorized)),
+  }
+  .to_string();
   let mut url: String = "/".to_string();
   match state.users.get(&user.username) {
     Some(u) => {
@@ -90,7 +98,7 @@ pub async fn login(mut req: Request<State>) -> tide::Result {
 
         match state.apps.get(&query.app) {
           Some(app) => {
-            if query.secret == app.secret {
+            if secret == app.secret {
               url = app.url.to_owned();
               url += &("id=".to_string() + &id.to_string());
             } else {
@@ -215,7 +223,6 @@ pub async fn add_app(req: Request<State>) -> tide::Result {
 #[derive(Deserialize)]
 struct AuthQuery {
   ssid: String,
-  secret: String,
   name: String,
 }
 
@@ -223,17 +230,22 @@ struct AuthQuery {
 pub async fn auth_session(req: Request<State>) -> tide::Result {
   let auth_query: AuthQuery = req.query()?;
   let mut state = req.state().db.get_mut();
+  let secret = match req.header("Authorization") {
+    Some(secret) => secret,
+    None => return Ok(Response::new(StatusCode::Unauthorized)),
+  }
+  .to_string();
 
   Ok(
     match state.sessions.get(&Uuid::from_str(&auth_query.ssid)?) {
       Some(session) if session.expires > OffsetDateTime::now_utc() => {
         match state.apps.get(&auth_query.name) {
-          Some(app) if app.secret == auth_query.secret => Response::builder(StatusCode::Ok)
+          Some(app) if app.secret == secret => Response::builder(StatusCode::Ok)
             .body(json!({"username":session.clone().username,"app":session.clone().app}))
             .content_type(mime::JSON)
             .build(),
           Some(_) => {
-            state.sessions.remove(&Uuid::from_str(&auth_query.secret)?);
+            state.sessions.remove(&Uuid::from_str(&secret)?);
             Response::new(StatusCode::Unauthorized)
           }
           None => Response::new(StatusCode::NotFound),
